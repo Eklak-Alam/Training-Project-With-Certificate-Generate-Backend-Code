@@ -84,4 +84,28 @@ public class StudentService {
         dto.setEndDate(student.getEndDate());
         return dto;
     }
+
+
+    // In StudentService.java
+
+    @Transactional
+    public Student updateStudent(String panNumber, StudentDTO studentDTO) {
+        Student existingStudent = getStudentByPan(panNumber);
+
+        // Update all fields except PAN (which is our identifier)
+        existingStudent.setSrNo(studentDTO.getSrNo());
+        existingStudent.setName(studentDTO.getName());
+        existingStudent.setLicRegdNumber(studentDTO.getLicRegdNumber());
+        existingStudent.setBranch(studentDTO.getBranch());
+        existingStudent.setStartDate(studentDTO.getStartDate());
+        existingStudent.setEndDate(studentDTO.getEndDate());
+
+        return studentRepository.save(existingStudent);
+    }
+
+    @Transactional
+    public void deleteStudent(String panNumber) {
+        Student student = getStudentByPan(panNumber);
+        studentRepository.delete(student);
+    }
 }

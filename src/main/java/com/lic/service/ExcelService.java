@@ -1,6 +1,7 @@
 package com.lic.service;
 
 import com.lic.dto.StudentDTO;
+import com.lic.repository.StudentRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
@@ -11,11 +12,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class ExcelService {
+
+    private final StudentRepository studentRepository;
+
+    public ExcelService(StudentRepository studentRepository) {
+        this.studentRepository = studentRepository;
+    }
 
     public List<StudentDTO> processFile(MultipartFile file) throws IOException {
         String filename = file.getOriginalFilename();
@@ -35,6 +44,7 @@ public class ExcelService {
 
     private List<StudentDTO> processExcelFile(MultipartFile file) throws IOException {
         List<StudentDTO> students = new ArrayList<>();
+        Set<String> existingPanNumbers = getExistingPanNumbers();
 
         try (InputStream is = file.getInputStream();
              Workbook workbook = new XSSFWorkbook(is)) {
@@ -47,17 +57,24 @@ public class ExcelService {
 
             while (rows.hasNext()) {
                 Row row = rows.next();
-                StudentDTO student = new StudentDTO();
+                String panNumber = getStringValue(row.getCell(2)).toUpperCase();
 
+                // Skip if PAN number already exists
+                if (existingPanNumbers.contains(panNumber)) {
+                    continue;
+                }
+
+                StudentDTO student = new StudentDTO();
                 student.setSrNo(getIntValue(row.getCell(0)));
                 student.setName(getStringValue(row.getCell(1)));
-                student.setPanNumber(getStringValue(row.getCell(2)).toUpperCase());
+                student.setPanNumber(panNumber);
                 student.setLicRegdNumber(getStringValue(row.getCell(3)));
                 student.setBranch(getStringValue(row.getCell(4)));
                 student.setStartDate(getStringValue(row.getCell(5)));
                 student.setEndDate(getStringValue(row.getCell(6)));
 
                 students.add(student);
+                existingPanNumbers.add(panNumber); // Add to set to prevent duplicates in same file
             }
         }
         return students;
@@ -65,6 +82,7 @@ public class ExcelService {
 
     private List<StudentDTO> processCsvFile(MultipartFile file) throws IOException {
         List<StudentDTO> students = new ArrayList<>();
+        Set<String> existingPanNumbers = getExistingPanNumbers();
 
         try (BufferedReader br = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
             // Skip header line if exists
@@ -75,19 +93,32 @@ public class ExcelService {
                 String[] values = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
                 if (values.length < 7) continue;
 
+                String panNumber = cleanCsvValue(values[2]).toUpperCase();
+
+                // Skip if PAN number already exists
+                if (existingPanNumbers.contains(panNumber)) {
+                    continue;
+                }
+
                 StudentDTO student = new StudentDTO();
                 student.setSrNo(parseIntSafe(values[0]));
                 student.setName(cleanCsvValue(values[1]));
-                student.setPanNumber(cleanCsvValue(values[2]).toUpperCase());
+                student.setPanNumber(panNumber);
                 student.setLicRegdNumber(cleanCsvValue(values[3]));
                 student.setBranch(cleanCsvValue(values[4]));
                 student.setStartDate(cleanCsvValue(values[5]));
                 student.setEndDate(cleanCsvValue(values[6]));
 
                 students.add(student);
+                existingPanNumbers.add(panNumber); // Add to set to prevent duplicates in same file
             }
         }
         return students;
+    }
+
+    private Set<String> getExistingPanNumbers() {
+        // Fetch all existing PAN numbers from database
+        return new HashSet<>(studentRepository.findAllPanNumbers());
     }
 
     private String cleanCsvValue(String value) {
