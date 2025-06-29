@@ -1,6 +1,5 @@
 package com.lic.controller;
 
-
 import com.lic.dto.UserRegistrationDto;
 import com.lic.entities.User;
 import com.lic.security.JwtTokenProvider;
@@ -8,18 +7,23 @@ import com.lic.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = "http://localhost:3000/", allowCredentials = "true")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class UserController {
 
     private final UserService userService;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
 
     @PostMapping("/register")
     public ResponseEntity<User> register(@RequestBody UserRegistrationDto registrationDto) {
@@ -30,20 +34,21 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.username(),
+                            loginRequest.password()
+                    )
+            );
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
             User user = userService.findByUsername(loginRequest.username());
-
-            System.out.println("Input Password: " + loginRequest.password());
-            System.out.println("Stored Hash: " + user.getPassword());
-            System.out.println("Matches? " + passwordEncoder.matches(loginRequest.password(), user.getPassword()));
-
-            if (!passwordEncoder.matches(loginRequest.password(), user.getPassword())) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid password");
-            }
-
             String token = jwtTokenProvider.generateToken(user.getUsername(), user.getRole());
+
             return ResponseEntity.ok(new JwtAuthenticationResponse(token, user.getRole()));
 
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
     }
