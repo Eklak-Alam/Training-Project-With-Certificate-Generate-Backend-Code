@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class StudentDTO {
-    private Integer srNo;
+    private String srNo;
     private String name;
     private String panNumber;
     private String licRegdNumber;

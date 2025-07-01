@@ -21,7 +21,7 @@ public class Student {
     private Long id;
 
     @Column(name = "sr_no")
-    private Integer srNo;
+    private String srNo;
 
     @Column(nullable = false)
     private String name;

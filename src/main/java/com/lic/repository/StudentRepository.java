@@ -22,20 +22,20 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     @Query("SELECT s.panNumber FROM Student s")
     List<String> findAllPanNumbers();
 
-    // Find students by LIC registration number
-    List<Student> findByLicRegdNumber(String licRegdNumber);
-
-    // Find students by branch name
-    List<Student> findByBranch(String branch);
-
-    // Find students by serial number range
-    List<Student> findBySrNoBetween(Integer start, Integer end);
-
-    // Custom query to find students created after a certain date
-    @Query("SELECT s FROM Student s WHERE s.createdAt >= :date")
-    List<Student> findStudentsCreatedAfter(Date date);
-
-    // Count students by branch
-    @Query("SELECT COUNT(s) FROM Student s WHERE s.branch = :branch")
-    Long countByBranch(String branch);
+//    // Find students by LIC registration number
+//    List<Student> findByLicRegdNumber(String licRegdNumber);
+//
+//    // Find students by branch name
+//    List<Student> findByBranch(String branch);
+//
+//    // Find students by serial number range
+//    List<Student> findBySrNoBetween(Integer start, Integer end);
+//
+//    // Custom query to find students created after a certain date
+//    @Query("SELECT s FROM Student s WHERE s.createdAt >= :date")
+//    List<Student> findStudentsCreatedAfter(Date date);
+//
+//    // Count students by branch
+//    @Query("SELECT COUNT(s) FROM Student s WHERE s.branch = :branch")
+//    Long countByBranch(String branch);
 }
