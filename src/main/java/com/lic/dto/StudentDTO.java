@@ -11,4 +11,5 @@ public class StudentDTO {
     private String branch;
     private String startDate;
     private String endDate;
+    private Boolean lastUpload; // Add this field
 }

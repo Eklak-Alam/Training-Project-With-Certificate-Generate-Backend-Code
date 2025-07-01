@@ -43,4 +43,7 @@ public class Student {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Date createdAt;
+
+    @Column(name = "last_upload", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean lastUpload;
 }

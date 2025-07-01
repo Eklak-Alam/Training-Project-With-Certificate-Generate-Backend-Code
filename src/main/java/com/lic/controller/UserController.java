@@ -1,6 +1,6 @@
 package com.lic.controller;
 
-import com.lic.dto.UserRegistrationDto;
+import com.lic.dto.*;
 import com.lic.entities.User;
 import com.lic.security.JwtTokenProvider;
 import com.lic.service.UserService;
@@ -50,6 +50,28 @@ public class UserController {
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+        }
+    }
+
+
+    @PostMapping("/verify-user-credentials")
+    public ResponseEntity<?> verifyUserCredentials(@RequestBody VerifyUserRequest request) {
+        try {
+            User user = userService.findByUsernameAndEmail(request.getUsername(), request.getEmail());
+            return ResponseEntity.ok(new VerificationResponse(true, "User verified successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new VerificationResponse(false, "Invalid username or email"));
+        }
+    }
+
+    @PutMapping("/update-user-password")
+    public ResponseEntity<?> updateUserPassword(@RequestBody UpdatePasswordRequest request) {
+        try {
+            userService.updatePassword(request);
+            return ResponseEntity.ok(new SimpleResponse("Password updated successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new SimpleResponse(e.getMessage()));
         }
     }
 

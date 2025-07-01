@@ -1,6 +1,7 @@
 package com.lic.service;
 
 import com.lic.dto.StudentDTO;
+import com.lic.entities.Student;
 import com.lic.repository.StudentRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -16,7 +17,7 @@ import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class ExcelService {
@@ -33,6 +34,13 @@ public class ExcelService {
     }
 
     public List<StudentDTO> processFile(MultipartFile file) throws IOException {
+        // Reset all lastUpload flags before processing new file
+        try {
+            studentRepository.resetLastUploadFlag();
+        } catch (Exception e) {
+            logger.warn("No records to update - proceeding with new upload");
+        }
+
         validateFile(file);
         String filename = file.getOriginalFilename();
 
@@ -41,17 +49,44 @@ public class ExcelService {
         }
 
         try {
+            List<StudentDTO> processedStudents;
             if (filename.endsWith(".xlsx")) {
-                return processExcelFile(file);
+                processedStudents = processExcelFile(file);
             } else if (filename.endsWith(".csv")) {
-                return processCsvFile(file);
+                processedStudents = processCsvFile(file);
             } else {
                 throw new IllegalArgumentException("Unsupported file format");
             }
+
+            // Save all processed students with lastUpload=true
+            saveStudentsWithLastUploadFlag(processedStudents);
+
+            return processedStudents;
         } catch (Exception e) {
             logger.error("Error processing file: {}", filename, e);
             throw new IOException("Failed to process file: " + e.getMessage(), e);
         }
+    }
+
+    private void saveStudentsWithLastUploadFlag(List<StudentDTO> studentDTOs) {
+        List<Student> students = studentDTOs.stream()
+                .map(this::convertToEntity)
+                .collect(Collectors.toList());
+
+        studentRepository.saveAll(students);
+    }
+
+    private Student convertToEntity(StudentDTO dto) {
+        return Student.builder()
+                .srNo(dto.getSrNo())
+                .name(dto.getName())
+                .panNumber(dto.getPanNumber())
+                .licRegdNumber(dto.getLicRegdNumber())
+                .branch(dto.getBranch())
+                .startDate(dto.getStartDate())
+                .endDate(dto.getEndDate())
+                .lastUpload(true)
+                .build();
     }
 
     private void validateFile(MultipartFile file) throws IOException {
@@ -105,7 +140,7 @@ public class ExcelService {
         }
 
         StudentDTO student = new StudentDTO();
-        student.setSrNo(getStringValue(row.getCell(0))); // Preserve exact SR number format
+        student.setSrNo(getStringValue(row.getCell(0)));
         student.setName(normalizeName(getStringValue(row.getCell(1))));
         student.setPanNumber(panNumber);
         student.setLicRegdNumber(normalizeLicNumber(getStringValue(row.getCell(3))));
@@ -151,7 +186,7 @@ public class ExcelService {
         }
 
         StudentDTO student = new StudentDTO();
-        student.setSrNo(cleanCsvValue(values[0])); // Preserve exact SR number format
+        student.setSrNo(cleanCsvValue(values[0]));
         student.setName(normalizeName(cleanCsvValue(values[1])));
         student.setPanNumber(panNumber);
         student.setLicRegdNumber(normalizeLicNumber(cleanCsvValue(values[3])));
